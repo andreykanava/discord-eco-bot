@@ -1,0 +1,14 @@
+{"items": [
+  {"id": 1,"name": "Машина Такси", "time": 3600, "price": 3000, "profit": 50, "risk": 0, "quantity": 30, "decription": "Каждая машина такси приносит по 80:money_with_wings: в час. Id: 1"},
+  {"id": 2,"name": "Грузовая машина", "time": 8200,"price": 8000, "profit": 160, "risk": 0, "quantity": 30, "decription": "Каждая грузовая машина приносит по 160:money_with_wings: в час. Id: 2"},
+  {"id": 3,"name": "Грузовой самолет", "time": 10800, "price": 15000, "profit": 310, "risk": 0, "quantity": 30, "decription": "Каждая самолет приносит по 310:money_with_wings: в час. Без рисков. Id: 3"},
+  {"id": 4,"name": "Грузовая компания", "time": 18000,"price": 23000, "profit": 700, "risk": 20, "quantity": 10, "decription": "Каждая грузова компания приносит 700:money_with_wings: в час. Id: 4"},
+  {"id": 5,"name": "Майнинг ферма", "time": 1300, "price": 9000, "profit": 290, "risk": 10, "quantity": 30, "decription": "Каждая Майнинг ферма приносит 290:money_with_wings: в час. Id: 5"},
+  {"id": 6,"name": "Акции Valve", "time": 3600, "price": 9500, "profit": 300, "risk": 20, "quantity": 1, "decription": "Каждая Акция valve приносит 300:money_with_wings: в час. Id: 6"},
+  {"id": 7,"name": "Акции Apple", "time": 3600, "price": 9500, "profit": 300, "risk": 20, "quantity": 1, "decription": "Каждая Акция apple приносит 300:money_with_wings: в час. Id: 7"},
+  {"id": 8,"name": "Акции Microsoft", "time": 3600, "price": 9500, "profit": 300, "risk": 20, "quantity": 1, "decription": "Каждая Акция microsoft приносит 300:money_with_wings: в час. Id: 8"},
+  {"id": 9,"name": "Инвестиционный счет в банке (ур. 1)", "time": 43200, "price": 10000, "profit": 0, "risk": 0, "quantity": 20, "decription": "Счет в инвистиционном банке позволит заробатывать 8% от своих сбережений в банке. Id: 9"},
+  {"id": 10,"name": "Инвестиционный счет в банке (ур. 2)", "time": 43200,"price": 10000, "profit": 0, "risk": 0, "quantity": 20, "decription": "Счет в инвистиционном банке позволит заробатывать 14% от своих сбережений в банке. Id: 10"},
+  {"id": 11,"name": "Инвестиционный счет в банке (ур. 3)", "time": 43200,"price": 10000, "profit": 0, "risk": 0, "quantity": 20, "decription": "Счет в инвистиционном банке позволит заробатывать 19% от своих сбережений в банке. Id: 11"},
+  {"id": 12,"name": "Телефон с доступом в дарк нэт", "time": 0,"price": 50000, "profit": 0, "risk": 0, "quantity": 5, "decription": "Телефон с доступом в дарк нэт открывает комманду dark. Id: 12"}
+]}
