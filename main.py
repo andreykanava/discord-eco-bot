@@ -1,35 +1,37 @@
 import asyncio
-
 import discord
-import uaclient.entitlements
+import requests
 from discord.ext import commands
 import os
 from random import randint
 import json
 client = commands.Bot(command_prefix='+', intents = discord.Intents(messages = True, guild_messages = True, members = True, guilds = True))
 client.remove_command("help")
-
+ids = []
 @client.event
 async def on_ready():
   print("Ready")
+  with open('data.json', 'r') as dt:
+   list = json.load(dt)
+   for c in range(len(list["users"])):
+       ids.append(list["users"][c]["id"])
   for guild in client.guilds:
       for member in guild.members:
           print(member, member.id)
           data = {
-              "id": member.id,
-              "bank": 500,
-              "cash": 0,
-              "inventory": [],
+             "id": member.id,
+             "bank": 500,
+             "cash": 0,
+             "inventory": [],
+             "opened": []
           }
-          with open('data.json', 'r+') as dt:
-              list = json.load(dt)
-              if data not in list["users"]:
-                  list["users"].append(data)
-                  dt.seek(0)
-                  json.dump(list, dt)
-                  print(list)
-              else:
-                  print("OK")
+          if data["id"] not in ids:
+            with open('data.json', 'w') as dtm:
+              list["users"].append(data)
+              json.dump(list, dtm)
+              print(list)
+          else:
+            print("OK")
   client.loop.create_task(payday())
 @client.event
 async def on_member_join(member):
@@ -39,6 +41,7 @@ async def on_member_join(member):
         "bank": 500,
         "cash": 0,
         "inventory": [],
+        "opened": []
     }
     with open('data.json', 'r+') as dt:
         list = json.load(dt)
@@ -311,7 +314,7 @@ async def user_work(ctx):
                             embed.add_field(name="Ошибка! Вы были оштрафованы", value=f'{pay} :money_with_wings:')
                             await ctx.send(embed=embed)
 
-@client.command(aliases=['give', 'GIVE'])
+@client.command(aliases=['pay', 'PAY'])
 async def user_give(ctx, member: discord.Member, amount):
     with open('data.json', 'r') as dt:
         list = json.load(dt)
@@ -347,7 +350,7 @@ async def user_shop(ctx):
             title='shop'
         )
         for i in range(len(list['items'])):
-            embed.add_field(name=f'{list["items"][i]["name"]}', value=f'{list["items"][i]["decription"]} Цена: {list["items"][i]["price"]}:money_with_wings:. В наличии: {list["items"][i]["quantity"]}.')
+            embed.add_field(name=f'{list["items"][i]["name"]} - {list["items"][i]["price"]}:money_with_wings:', value=f'{list["items"][i]["decription"]}. В наличии: {list["items"][i]["quantity"]}.')
         await ctx.send(embed=embed)
 
 @client.command(aliases=['buy', 'BUY'])
@@ -398,6 +401,7 @@ async def user_inventory(ctx):
         list = json.load(dt)
         with open('shop.json', 'r') as sh:
             shoplist = json.load(sh)
+            profit = 0
             for i in range(len(list["users"])):
                 if list["users"][i]["id"] == ctx.author.id:
                     embed = discord.Embed(
@@ -409,10 +413,274 @@ async def user_inventory(ctx):
                     for x in range(len(list["users"][i]["inventory"])):
                         for y in range(len(shoplist["items"])):
                             if list["users"][i]["inventory"][x] == shoplist["items"][y]["id"]:
+                                profit = profit + shoplist["items"][y]["profit"]
                                 embed.add_field(name=shoplist["items"][y]["name"], value=shoplist["items"][y]["decription"])
+                    embed.add_field(name='Ваш часовой доход составляет:', value=profit)
                     await ctx.send(embed=embed)
 
+@client.command(aliases=['coin', 'coinflip', 'COIN', 'COINFLIP'])
+async def user_coinflip(ctx, bet, space):
+  with open('data.json', 'r') as dt:
+    list = json.load(dt)
+    for i in range(len(list['users'])):
+      if ctx.author.id == list['users'][i]['id']:
+        if bet == 'all':
+          bet = list['users'][i]['cash']
+        space = int(space)
+        bet = int(bet)
+        if bet <= list['users'][i]['cash']:
+          if space == randint(1, 2):
+            list['users'][i]['cash'] = list['users'][i]['cash'] + bet
+            with open('data.json', 'w') as dtj:
+              json.dump(list, dtj)
+              embed = discord.Embed(
+                                        color=discord.Color.green()
+                                    )
+              embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+              embed.add_field(name="Победа", value=f"{bet}:money_with_wings:")
+              await ctx.send(embed=embed)
+          else:
+            list['users'][i]['cash'] = list['users'][i]['cash'] - bet
+            with open('data.json', 'w') as dtj:
+              json.dump(list, dtj)
+              embed = discord.Embed(
+                                        color=discord.Color.red()
+                                    )
+              embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+              embed.add_field(name="Поражение", value=f"{bet}:money_with_wings:")
+              await ctx.send(embed=embed)
+        else:
+          embed = discord.Embed(
+                                        color=discord.Color.red()
+                                    )
+          embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+          embed.add_field(name="Недостаточно средств", value=f"{bet}:money_with_wings:")
+          await ctx.send(embed=embed)
 
+@client.command(aliases=['crypto', 'CRYPTO'])
+async def user_crypto(ctx, crypto: str = None):
+    if crypto == None:
+        embed = discord.Embed(
+            color=discord.Color.blue()
+        )
+        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+        embed.add_field(name="BTC:", value=get_current_price('BTCUSDT'))
+        embed.add_field(name="ETH:", value=get_current_price('ETHUSDT'))
+        embed.add_field(name="BCH:", value=get_current_price('BCHUSDT'))
+        embed.add_field(name="BNB:", value=get_current_price('BNBUSDT'))
+        embed.add_field(name="ADA:", value=get_current_price('ADAUSDT'))
+        embed.add_field(name="LUNA:", value=get_current_price('LUNAUSDT'))
+        await ctx.send(embed=embed)
+    else:
+        currency = get_current_price(crypto.upper() + 'USDT')
+        if currency == None:
+            embed = discord.Embed(
+                color=discord.Color.red()
+            )
+            embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+            embed.add_field(name=f"Такой валюты нет:", value=crypto)
+            await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(
+                color=discord.Color.blue()
+            )
+            embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+            embed.add_field(name=f"{crypto.upper()}:", value=currency)
+            await ctx.send(embed=embed)
+
+@client.command(aliases=['long', 'LONG'])
+async def user_long(ctx, amount, laverage, symbol):
+    with open('data.json', 'r') as dt:
+        list = json.load(dt)
+        for i in range(len(list["users"])):
+            if list["users"][i]["id"] == ctx.author.id:
+                if amount == 'all':
+                    amount = list["users"][i]["cash"]
+                if list["users"][i]["cash"] >= int(amount):
+                    id = len(list["users"][i]["opened"]) + 1
+                    leverage = int(laverage)
+                    if leverage > 0 and leverage <= 150:
+                        amount = int(amount)
+                        symbol = symbol.upper()
+                        price = get_current_price(symbol + 'USDT')
+                        if price != None:
+                            list["users"][i]["cash"] = list["users"][i]["cash"] - amount
+                            direction = 'long'
+                            dict = {}
+                            dict[id] = price, symbol, leverage, amount, direction
+                            print(dict)
+                            list["users"][i]["opened"].append(dict)
+                            print(list["users"][i]["opened"])
+                            with open('data.json', 'w') as jsf:
+                                json.dump(list, jsf)
+                                embed = discord.Embed(
+                                    color=discord.Color.green()
+                                )
+                                embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+                                embed.add_field(name=f"Сделка открыта!:", value=f"No.: {id}, валюта {symbol}, кредитное плечо {leverage}, сумма: {amount}, направление: {direction}")
+                                await ctx.send(embed=embed)
+                        else:
+                            embed = discord.Embed(
+                                color=discord.Color.red()
+                            )
+                            embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+                            embed.add_field(name=f"Такой валюты нет!:",
+                                            value=symbol)
+                            await ctx.send(embed=embed)
+                    else:
+                        embed = discord.Embed(
+                            color=discord.Color.red()
+                        )
+                        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+                        embed.add_field(name=f"Кредитное плечо должно быть больше положительное и меньше 150",
+                                        value=f"кредитное плечо: {leverage}")
+                        await ctx.send(embed=embed)
+                else:
+                    embed = discord.Embed(
+                        color=discord.Color.red()
+                    )
+                    embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+                    embed.add_field(name=f"Недостаточно средств!:",
+                                    value=f"сумма: {amount}")
+                    await ctx.send(embed=embed)
+
+@client.command(aliases=['short', 'SHORT'])
+async def user_short(ctx, amount, laverage, symbol):
+    with open('data.json', 'r') as dt:
+        list = json.load(dt)
+        for i in range(len(list["users"])):
+            if list["users"][i]["id"] == ctx.author.id:
+                if amount == 'all':
+                    amount = list["users"][i]["cash"]
+                if list["users"][i]["cash"] >= int(amount):
+                    id = len(list["users"][i]["opened"]) + 1
+                    leverage = int(laverage)
+                    if leverage > 0 and leverage <= 150:
+                        amount = int(amount)
+                        symbol = symbol.upper()
+                        price = get_current_price(symbol + 'USDT')
+                        if price != None:
+                            list["users"][i]["cash"] = list["users"][i]["cash"] - amount
+                            direction = 'short'
+                            dict = {}
+                            dict[id] = price, symbol, leverage, amount, direction
+                            print(dict)
+                            list["users"][i]["opened"].append(dict)
+                            print(list["users"][i]["opened"])
+                            with open('data.json', 'w') as jsf:
+                                json.dump(list, jsf)
+                                embed = discord.Embed(
+                                    color=discord.Color.green()
+                                )
+                                embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+                                embed.add_field(name=f"Сделка открыта!", value=f"№ {id}\n валюта {symbol}\n кредитное плечо: {leverage}\n сумма: {amount}\n направление: {direction}\n цена открытия: {price}")
+                                await ctx.send(embed=embed)
+                        else:
+                            embed = discord.Embed(
+                                color=discord.Color.red()
+                            )
+                            embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+                            embed.add_field(name=f"Такой валюты нет!:",
+                                            value=symbol)
+                            await ctx.send(embed=embed)
+                    else:
+                        embed = discord.Embed(
+                            color=discord.Color.red()
+                        )
+                        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+                        embed.add_field(name=f"Кредитное плечо должно быть больше положительное и меньше 150",
+                                        value=f"кредитное плечо: {leverage}")
+                        await ctx.send(embed=embed)
+                else:
+                    embed = discord.Embed(
+                        color=discord.Color.red()
+                    )
+                    embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+                    embed.add_field(name=f"Недостаточно средств!:",
+                                    value=f"сумма: {amount}")
+                    await ctx.send(embed=embed)
+
+@client.command(aliases=['deals', 'DEALS'])
+async def user_deals(ctx):
+    with open('data.json', 'r') as dt:
+        list1 = json.load(dt)
+        for i in range(len(list1["users"])):
+            if list1["users"][i]["id"] == ctx.author.id:
+                embed = discord.Embed(
+                    color=discord.Color.blue(),
+                    title='Твои сделки:'
+                )
+                embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+                for x in range(len(list1["users"][i]["opened"])):
+                    for m in list1['users'][i]['opened'][x]:
+                        embed.add_field(name=f"сделка No. {list(list1['users'][i]['opened'][x].keys())[0]}", value=f'валюта: {list1["users"][i]["opened"][x][m][1]}\nкредитное плечо: {list1["users"][i]["opened"][x][m][2]}\nсумма: {list1["users"][i]["opened"][x][m][3]}\nнаправление: {list1["users"][i]["opened"][x][m][4]}\nцена открытия: {list1["users"][i]["opened"][x][m][0]}')
+                await ctx.send(embed=embed)
+
+@client.command(aliases=['close', 'CLOSE'])
+async def user_close(ctx, num):
+    with open('data.json', 'r') as dt:
+        list1 = json.load(dt)
+        for i in range(len(list1["users"])):
+            if list1["users"][i]["id"] == ctx.author.id:
+                for x in range(len(list1["users"][i]["opened"])):
+                    if list(list1['users'][i]['opened'][x].keys())[0] == num:
+                        for m in list1['users'][i]['opened'][x]:
+                            openprice = list1["users"][i]["opened"][x][m][0]
+                            symbol = list1["users"][i]["opened"][x][m][1]
+                            leverage = list1["users"][i]["opened"][x][m][2]
+                            amount = list1["users"][i]["opened"][x][m][3]
+                            direction = list1["users"][i]["opened"][x][m][4]
+                            usdbal = list1['users'][i]['cash']
+                            curprice = get_current_price(symbol + 'USDT')
+                            openprice = float(openprice)
+                            openprice = round(openprice)
+                            openprice = int(openprice)
+                            leverage = int(leverage)
+                            amount = int(amount)
+                            usdbal = int(usdbal)
+                            curprice = float(curprice)
+                            curprice = round(curprice)
+                            curprice = int(curprice)
+                            if direction == 'short':
+                                profit = curprice / openprice * 100 - 100
+                                profit = profit * leverage
+                                profit = profit / 100
+                                profit = profit * -1
+                                list1['users'][i]['cash'] = round(amount * profit + amount + usdbal)
+                                list1['users'][i]['opened'].remove(list1["users"][i]["opened"][x])
+                                with open('data.json', 'w') as obj:
+                                    json.dump(list1, obj)
+                                    embed = discord.Embed(
+                                        color=discord.Color.green()
+                                    )
+                                    embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+                                    embed.add_field(name=f"Сделка закрыта!:",
+                                                    value=f"валюта: {symbol}\n кредитное плечо: {leverage}\n сумма: {amount} направление: {direction}\n цена открытия: {openprice}\n цена закрытия: {curprice}")
+                                    await ctx.send(embed=embed)
+                            else:
+                                profit = curprice / openprice * 100 - 100
+                                profit = profit * leverage
+                                profit = profit / 100
+                                list1['users'][i]['cash'] = round(amount * profit + amount + usdbal)
+                                list1['users'][i]['opened'] = list1['users'][i]['opened'].remove(list1["users"][i]["opened"][x])
+                                with open('data.json', 'w') as obj:
+                                    json.dump(list1, obj)
+                                    embed = discord.Embed(
+                                        color=discord.Color.green()
+                                    )
+                                    embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+                                    embed.add_field(name=f"Сделка закрыта!:",
+                                                    value=f"валюта: {symbol}\n кредитное плечо: {leverage}\n сумма: {amount} направление: {direction}\n цена открытия: {openprice}\n цена закрытия: {curprice}")
+                                    await ctx.send(embed=embed)
+
+
+def get_price(symbol, prices):
+    for price in prices:
+        if symbol == price['symbol']:
+            return price['price']
+def get_current_price(symbol):
+    prices = requests.get('https://api.binance.com/api/v3/ticker/price').json()
+    return get_price(symbol, prices)
 def check(author):
     def inner_check(messege):
         if messege.author != author:
@@ -449,14 +717,17 @@ async def payday():
                     elif list["users"][i]["inventory"][x] == 8:
                         bank = bank + 300
                     elif list["users"][i]["inventory"][x] == 9:
-                        bank = bank + bank * 8
+                        bank = bank + 200
+                        bank = round(bank)
                     elif list["users"][i]["inventory"][x] == 10:
-                        bank = bank + bank * 14
+                        bank = bank + 400
+                        bank = round(bank)
                     elif list["users"][i]["inventory"][x] == 11:
-                        bank = bank + bank * 19
+                        bank = bank + 200
+                        bank = round(bank)
                 list["users"][i]["bank"] = bank
                 with open('data.json', 'w') as dt:
                     json.dump(list, dt)
 
         await asyncio.sleep(3600)
-client.run('OTMwNTQ2MTM5MjI3MzYxMzIw.Yd3coA.vTdBnuuTPrYEz0IMtBHR3-goMDg')
+client.run('OTMwNTQ2MTM5MjI3MzYxMzIw.Yd3coA.O6Eg1g5eTK0IuEJeR2jNJJ-qxeY')
