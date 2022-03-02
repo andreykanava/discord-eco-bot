@@ -730,4 +730,4 @@ async def payday():
                     json.dump(list, dt)
 
         await asyncio.sleep(3600)
-client.run('OTMwNTQ2MTM5MjI3MzYxMzIw.Yd3coA.O6Eg1g5eTK0IuEJeR2jNJJ-qxeY')
+client.run('')
